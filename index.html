@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Service Callback Notification System v2 — Live Simulation</title>
+<style>
+  :root{
+    --navy:#0B1030;
+    --panel:#141B47;
+    --pipe-edge:#324094;
+    --ice:#CADCFC;
+    --white:#FFFFFF;
+    --muted:#8496C9;
+    --gold:#FFC857;
+    --green:#43AA8B;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    height:100%;
+    background:radial-gradient(circle at 20% 0%, #16205A 0%, var(--navy) 55%);
+    font-family:Calibri,Arial,sans-serif;
+    color:var(--white);
+    overflow:hidden;
+  }
+  .page{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:18px 40px 14px;
+  }
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+    flex:0 0 auto;
+    margin-bottom:8px;
+  }
+  .title-block .eyebrow{
+    letter-spacing:3px;
+    text-transform:uppercase;
+    font-size:11px;
+    color:var(--gold);
+    font-weight:bold;
+    margin-bottom:4px;
+  }
+  .title-block h1{
+    font-size:22px;
+    margin:0;
+    font-weight:bold;
+  }
+  .tech-note{
+    font-size:11px;
+    color:var(--muted);
+    margin-top:4px;
+    letter-spacing:0.2px;
+  }
+  .tech-note code{
+    color:var(--gold);
+    font-family:Consolas, monospace;
+  }
+  .legend{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .legend-item{
+    display:flex;align-items:center;gap:6px;
+    font-size:12px;color:var(--ice);
+  }
+  .swatch{width:12px;height:12px;border-radius:50%;}
+
+  .controls{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:var(--panel);
+    border:1px solid var(--pipe-edge);
+    border-radius:8px;
+    padding:8px 14px;
+    flex-wrap:wrap;
+  }
+  .control{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .control label{
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:0.5px;
+    white-space:nowrap;
+    text-transform:uppercase;
+  }
+  .control input[type="number"]{
+    width:56px;
+    background:var(--navy);
+    border:1px solid var(--pipe-edge);
+    border-radius:6px;
+    color:var(--white);
+    font-size:12px;
+    padding:4px 6px;
+  }
+  #applyBtn{
+    background:var(--gold);
+    border:none;
+    color:#1a1a1a;
+    font-weight:bold;
+    font-size:12px;
+    padding:7px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    letter-spacing:0.5px;
+  }
+  #applyBtn:hover{ filter:brightness(1.08); }
+
+  .mode-toggle{
+    display:flex;
+    border:1px solid var(--pipe-edge);
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .mode-btn{
+    background:var(--navy);
+    border:none;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:bold;
+    letter-spacing:0.5px;
+    padding:7px 12px;
+    cursor:pointer;
+  }
+  .mode-btn.active{
+    background:var(--gold);
+    color:#1a1a1a;
+  }
+
+  .manual-panel{
+    display:none;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:4px;
+  }
+  .manual-panel.visible{ display:flex; }
+  .manual-label{
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:0.5px;
+  }
+  .manual-color-btn{
+    width:26px;height:26px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,0.25);
+    cursor:pointer;
+    padding:0;
+    transition:transform .15s ease;
+  }
+  .manual-color-btn:hover{ transform:scale(1.15); }
+  .manual-color-btn:active{ transform:scale(0.9); }
+
+  .flow-stage{
+    flex:1;
+    display:flex;
+    align-items:center;
+    gap:32px;
+    min-height:0;
+    overflow-x:auto;
+    overflow-y:visible;
+  }
+
+  .source{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .source-label{
+    font-size:12px;
+    font-weight:bold;
+    letter-spacing:1.5px;
+    color:var(--ice);
+  }
+  .faucet{
+    width:34px;height:22px;
+    background:var(--pipe-edge);
+    border-radius:6px 6px 3px 3px;
+    position:relative;
+  }
+  .faucet::after{
+    content:"";
+    position:absolute;
+    bottom:-6px;left:50%;
+    transform:translateX(-50%);
+    width:6px;height:10px;
+    background:var(--pipe-edge);
+    border-radius:2px;
+  }
+
+  .pipe{
+    position:relative;
+    border-radius:30px;
+    background:
+      repeating-linear-gradient(100deg,
+        rgba(255,255,255,0.05) 0px,
+        rgba(255,255,255,0.05) 10px,
+        rgba(255,255,255,0.0) 10px,
+        rgba(255,255,255,0.0) 22px),
+      linear-gradient(180deg, #202b6b, #131a44);
+    border:2px solid var(--pipe-edge);
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.5);
+    overflow:hidden;
+    background-size:200% 100%, 100% 100%;
+    animation: flowbg 3.5s linear infinite;
+  }
+  @keyframes flowbg{
+    from{background-position:0 0, 0 0;}
+    to{background-position:-200px 0, 0 0;}
+  }
+
+  .main-pipe{
+    width:280px;
+    height:44px;
+  }
+
+  .allocator-hub{
+    flex:0 0 150px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+  }
+  .hub-core{
+    width:78px;height:78px;
+    background:var(--panel);
+    border:2px solid var(--gold);
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    box-shadow:0 0 0 0 transparent;
+    transition:box-shadow .35s ease;
+  }
+  .hub-valve{
+    width:46px;height:46px;
+    transition:transform .4s cubic-bezier(.3,.9,.4,1);
+  }
+  .hub-label{
+    font-size:11px;
+    font-weight:bold;
+    color:var(--gold);
+    letter-spacing:1.5px;
+  }
+  .waiting-label{
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:1px;
+    transition:color .3s ease;
+  }
+  .waiting-label.blocked{
+    color:#F94144;
+  }
+
+  .clients-col{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:0;
+  }
+  .clients-toolbar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .clients-toolbar-label{
+    font-size:10px;
+    font-weight:bold;
+    letter-spacing:1.5px;
+    color:var(--muted);
+  }
+  .clients-toolbar-count{
+    font-size:12px;
+    font-weight:bold;
+    color:var(--ice);
+    min-width:14px;
+    text-align:center;
+  }
+  .client-adj-btn{
+    width:22px;height:22px;
+    border-radius:50%;
+    background:var(--panel);
+    border:1px solid var(--pipe-edge);
+    color:var(--gold);
+    font-size:14px;
+    font-weight:bold;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+  }
+  .client-adj-btn:hover{ background:#28337A; }
+  .client-adj-btn:disabled{ opacity:0.35; cursor:not-allowed; }
+  
+  .clients{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:18px;
+    min-width:0;
+    overflow-x:auto;
+    overflow-y:visible;
+    padding:6px 2px;
+    position:relative;
+  }
+  .client-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    transition:opacity .3s ease;
+    position:relative;
+  }
+  .client-row.disconnecting{
+    opacity:0.55;
+  }
+  .client-row.disconnecting .client-pipe{
+    border-style:dashed;
+  }
+  .client-label{
+    flex:0 0 90px;
+    font-size:13px;
+    font-weight:bold;
+    color:var(--ice);
+    letter-spacing:0.5px;
+  }
+  .client-row.disconnecting .client-label{
+    color:#F94144;
+  }
+  .client-pipe{
+    height:40px;
+    flex:0 0 auto;
+  }
+  .client-count{
+    flex:0 0 84px;
+    font-size:11px;
+    color:var(--muted);
+    text-align:right;
+    white-space:nowrap;
+  }
+  .dispatcher-status{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    background:var(--panel);
+    border:1px solid var(--pipe-edge);
+    border-radius:8px;
+    padding:10px 14px;
+    width:100px;
+    flex:0 0 100px;
+    font-size:10px;
+    font-weight:bold;
+    letter-spacing:0.5px;
+    text-align:center;
+    color:var(--muted);
+    transition:background .25s ease, color .25s ease, border-color .25s ease;
+  }
+  .dispatcher-status.active{
+    background:var(--gold);
+    border-color:var(--gold);
+    color:#1a1a1a;
+  }
+  .dispatcher-status-label{
+    font-size:8px;
+    letter-spacing:0.8px;
+    margin-bottom:6px;
+    opacity:0.7;
+    text-transform:uppercase;
+  }
+  .dispatcher-status-ip{
+    font-size:10px;
+    font-weight:bold;
+    word-break:break-all;
+  }
+
+  .config{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    align-items:stretch;
+  }
+  .config-title{
+    font-size:10px;
+    font-weight:bold;
+    letter-spacing:2px;
+    color:var(--gold);
+    text-transform:uppercase;
+  }
+  .ip-slots{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 32px;
+    background:var(--panel);
+    border:1px solid var(--pipe-edge);
+    border-radius:8px;
+    padding:12px 16px 8px;
+  }
+  .ip-group{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    transition:opacity .3s ease;
+  }
+  .ip-group.disconnecting{ opacity:0.5; }
+  .ip-group.disconnecting .ip-group-label{ color:#F94144; }
+  .ip-group-label{
+    font-family:Consolas, monospace;
+    font-size:12px;
+    color:var(--ice);
+    letter-spacing:0.3px;
+    white-space:nowrap;
+  }
+  .color-slots{
+    display:flex;
+    gap:6px;
+    align-items:center;
+  }
+  .color-slot{
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    border:2px solid var(--pipe-edge);
+    background:var(--panel);
+    position:relative;
+    transition:all .25s ease;
+  }
+  .color-slot.filled{
+    border-width:2px;
+  }
+  .slot-count{
+    position:absolute;
+    top:-8px;
+    right:-8px;
+    background:var(--gold);
+    color:#1a1a1a;
+    font-size:9px;
+    font-weight:bold;
+    border-radius:8px;
+    padding:1px 4px;
+    min-width:16px;
+    text-align:center;
+    display:none;
+  }
+  .color-slot.filled .slot-count{
+    display:block;
+  }
+
+  .droplet{
+    position:absolute;
+    top:50%;
+    left:0;
+    width:30px;height:30px;
+    margin-top:-15px;
+    border-radius:50%;
+    box-shadow:0 2px 6px rgba(0,0,0,0.4), inset -4px -4px 6px rgba(0,0,0,0.25), inset 3px 3px 5px rgba(255,255,255,0.35);
+  }
+  .droplet.pop-in{
+    animation: pop-in .22s ease;
+  }
+  @keyframes pop-in{
+    from{ transform:scale(0.3); opacity:0; }
+    to{ transform:scale(1); opacity:1; }
+  }
+  .client-overflow-badge{
+    position:absolute;
+    top:50%;
+    left:2px;
+    transform:translateY(-50%);
+    background:var(--gold);
+    color:#1a1a1a;
+    font-size:10px;
+    font-weight:bold;
+    letter-spacing:0.3px;
+    border-radius:10px;
+    padding:2px 7px;
+    min-width:16px;
+    text-align:center;
+    z-index:6;
+    box-shadow:0 0 0 2px var(--navy), 0 2px 4px rgba(0,0,0,0.4);
+    display:none;
+  }
+
+  footer{
+    flex:0 0 auto;
+    text-align:center;
+    font-size:11px;
+    color:var(--muted);
+    padding-top:8px;
+    letter-spacing:0.5px;
+  }
+
+  /* ── legend + live color +/- ── */
+  .legend-block{ display:flex; flex-direction:column; gap:8px; margin-top:8px; max-width:360px; }
+  .legend-block .legend{ gap:6px 10px; }
+  .swatch.compact{ width:15px; height:15px; }
+  .title-block{ flex:0 1 380px; }
+  .config{ flex:1 1 640px; min-width:0; }
+
+  /* manual buttons: wrap instead of stretching the source column */
+  .manual-panel.visible{ flex-direction:column; max-width:300px; }
+  #manualColorButtons{ flex-wrap:wrap; justify-content:center; max-width:300px; }
+  .manual-color-btn{ width:22px; height:22px; }
+
+  /* ── dead lane demo controls ── */
+  .demo-controls{ border-color:#7a2a3a; }
+  .demo-title{ font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#F94144; text-transform:uppercase; white-space:nowrap; }
+  .demo-check{ cursor:pointer; }
+  .demo-check span{ font-size:10px; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; white-space:nowrap; }
+  #deadLaneDemoBtn{
+    background:#F94144; border:none; color:#fff; font-weight:bold; font-size:12px;
+    padding:7px 14px; border-radius:6px; cursor:pointer; letter-spacing:0.5px; white-space:nowrap;
+  }
+  #deadLaneDemoBtn:hover{ filter:brightness(1.1); }
+  .demo-hint{ flex-basis:100%; font-size:10px; color:var(--muted); letter-spacing:0.3px; }
+
+  /* ── dead lane visuals ── */
+  .client-row.dead .client-pipe{ border-color:#F94144; border-style:dashed; }
+  .client-row.just-died .client-pipe{ animation: flowbg 3.5s linear infinite, diedPulse .8s ease-in-out 3; }
+  @keyframes diedPulse{
+    0%,100%{ box-shadow: inset 0 3px 10px rgba(0,0,0,0.5), 0 0 0 0 rgba(249,65,68,0); }
+    50%{ box-shadow: inset 0 3px 10px rgba(0,0,0,0.5), 0 0 0 7px rgba(249,65,68,0.55); }
+  }
+  .pipe.receiving{
+    border-color:var(--gold);
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,200,87,0.35);
+  }
+  .droplet.flying{ position:fixed; top:0; left:0; margin:0; z-index:60; pointer-events:none; }
+
+  /* ── dead lane progress panel ── */
+  .demo-panel{
+    display:none; flex:0 0 auto; margin-top:6px;
+    background:var(--panel); border:1px solid #7a2a3a; border-radius:8px;
+    padding:8px 12px; font-size:11px; color:var(--ice);
+  }
+  .demo-panel.visible{ display:block; }
+  .demo-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .demo-row + .demo-row{ margin-top:6px; }
+  .demo-panel-title{ font-size:10px; font-weight:bold; letter-spacing:1.5px; color:#F94144; text-transform:uppercase; }
+  .demo-phase{
+    padding:2px 9px; border-radius:10px; border:1px solid var(--pipe-edge);
+    color:var(--muted); font-size:10px; font-weight:bold; letter-spacing:0.5px; white-space:nowrap;
+  }
+  .demo-phase.done{ color:var(--green); border-color:var(--green); }
+  .demo-phase.current{ background:var(--gold); border-color:var(--gold); color:#1a1a1a; }
+  .demo-arrow{ color:var(--muted); }
+  .demo-status{ color:var(--ice); margin-left:6px; }
+  .demo-close{ margin-left:auto; background:none; border:none; color:var(--muted); cursor:pointer; font-size:13px; }
+  .demo-chip{
+    display:inline-flex; align-items:center; gap:5px; padding:2px 8px;
+    border-radius:10px; background:var(--navy); border:1px solid var(--pipe-edge);
+    font-family:Consolas, monospace; font-size:10px; white-space:nowrap;
+  }
+  .demo-chip.tally b{ color:var(--gold); font-weight:bold; }
+  .demo-chip small{ color:var(--muted); }
+  .demo-dot{ width:9px; height:9px; border-radius:50%; border:1px solid rgba(0,0,0,0.45); flex:0 0 auto; }
+  .demo-log{ max-height:44px; overflow:hidden; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="title-block">
+      <div class="eyebrow">Push Notification · V2 Architecture</div>
+      <h1>Service Callback Notification System</h1>
+      <div class="tech-note">
+        <strong>New:</strong> Each IP has 5 color slots · Sequential processing per color · Dynamic slot allocation
+      </div>
+      <div class="legend-block">
+        <div class="clients-toolbar">
+          <span class="clients-toolbar-label">COLORS</span>
+          <button type="button" class="client-adj-btn" id="colorMinus">−</button>
+          <span class="clients-toolbar-count" id="colorCount">8</span>
+          <button type="button" class="client-adj-btn" id="colorPlus">+</button>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+    <div class="config">
+    <div class="config-title">Configurations</div>
+    <div class="controls">
+      <div class="control">
+        <label>Mode</label>
+        <div class="mode-toggle">
+          <button type="button" id="modeAutoBtn" class="mode-btn active">Automatic</button>
+          <button type="button" id="modeManualBtn" class="mode-btn">Manual</button>
+        </div>
+      </div>
+      <div class="control">
+        <label for="colorsInput">Colors</label>
+        <input type="number" id="colorsInput" min="1" max="30" value="8">
+      </div>
+      <div class="control">
+        <label for="clientsInput">Clients</label>
+        <input type="number" id="clientsInput" min="1" max="8" value="1">
+      </div>
+      <div class="control">
+        <label for="queueCapacityInput">Queue capacity</label>
+        <input type="number" id="queueCapacityInput" min="1" max="20" value="6">
+      </div>
+      <div class="control">
+        <label for="producerSpeedInput">Producer speed (ms)</label>
+        <input type="number" id="producerSpeedInput" min="100" value="800">
+      </div>
+      <div class="control">
+        <label for="execTimeInput">Dispatcher time (ms)</label>
+        <input type="number" id="execTimeInput" min="100" value="2000">
+      </div>
+      <div class="control">
+        <label for="clientExecTimeInput">Client time (ms)</label>
+        <input type="number" id="clientExecTimeInput" min="10" value="5000">
+      </div>
+      <div class="control">
+        <label for="colorSlotsInput">Color slots/client</label>
+        <input type="number" id="colorSlotsInput" min="1" max="24" value="5">
+      </div>
+      <button id="applyBtn">Apply</button>
+    </div>
+    <div class="controls demo-controls">
+      <span class="demo-title">☠ Dead lane demo</span>
+      <div class="control"><label for="demoIpsInput">IPs</label><input type="number" id="demoIpsInput" min="3" max="8" value="4"></div>
+      <div class="control"><label for="demoColorsInput">Colors</label><input type="number" id="demoColorsInput" min="2" max="30" value="12"></div>
+      <div class="control"><label for="demoMsgsInput">Messages</label><input type="number" id="demoMsgsInput" min="6" max="300" value="48" style="width:64px"></div>
+      <div class="control"><label for="demoDelayInput">Msg delay (ms)</label><input type="number" id="demoDelayInput" min="10" max="2000" value="40"></div>
+      <div class="control"><label for="demoKillAfterInput">Kill after last msg (ms)</label><input type="number" id="demoKillAfterInput" min="0" max="10000" value="800" style="width:64px"></div>
+      <div class="control"><label for="demoRedistInput">Redistribute (ms/msg)</label><input type="number" id="demoRedistInput" min="0" max="3000" value="450" style="width:64px"></div>
+      <label class="control demo-check"><input type="checkbox" id="demoFreezeInput" checked><span>Freeze dispatcher</span></label>
+      <button type="button" id="deadLaneDemoBtn">☠ Run demo</button>
+      <div class="demo-hint" id="demoHint"></div>
+    </div>
+    <div class="ip-slots" id="ipSlots"></div>
+    </div>
+  </header>
+
+  <div class="flow-stage">
+    <div class="source">
+      <div class="source-label" id="sourceLabel">MAIN QUEUE</div>
+      <div class="faucet"></div>
+      <div class="pipe main-pipe" id="mainPipe"></div>
+      <div class="manual-panel" id="manualPanel">
+        <span class="manual-label">ADD MESSAGE</span>
+        <div id="manualColorButtons" style="display:flex; gap:6px;"></div>
+      </div>
+    </div>
+
+    <div class="allocator-hub">
+      <div class="hub-core" id="hubCore">
+        <svg class="hub-valve" id="hubValve" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="7" fill="var(--gold)"/>
+          <g stroke="var(--gold)" stroke-width="5" stroke-linecap="round">
+            <line x1="32" y1="4"  x2="32" y2="19"/>
+            <line x1="32" y1="45" x2="32" y2="60"/>
+            <line x1="4"  y1="32" x2="19" y2="32"/>
+            <line x1="45" y1="32" x2="60" y2="32"/>
+            <line x1="12" y1="12" x2="22.5" y2="22.5"/>
+            <line x1="41.5" y1="41.5" x2="52" y2="52"/>
+            <line x1="52" y1="12" x2="41.5" y2="22.5"/>
+            <line x1="22.5" y1="41.5" x2="12" y2="52"/>
+          </g>
+        </svg>
+      </div>
+      <div class="hub-label">ALLOCATOR</div>
+      <div class="waiting-label" id="blockedLabel">FLOWING</div>
+    </div>
+
+    <div class="clients-col">
+      <div class="clients-toolbar">
+        <span class="clients-toolbar-label" id="clientsToolbarLabel">CLIENTS (5 COLOR SLOTS/IP)</span>
+        <button type="button" class="client-adj-btn" id="clientMinus">−</button>
+        <span class="clients-toolbar-count" id="clientCount">3</span>
+        <button type="button" class="client-adj-btn" id="clientPlus">+</button>
+      </div>
+      <!-- clients list. Each row has: Label | Lane | Count | [dispatcher slot 100px] | CLIENT IP | CLIENT QUEUE -->
+      <!-- Dispatcher is a single shared box overlaid in the 100px spacer column, vertically centered -->
+      <div style="display:grid;grid-template-columns:1fr;flex:1;min-height:0;position:relative;">
+        <div class="clients" id="clients" style="flex:1;"></div>
+        <!-- Dispatcher floats in the spacer column (after Count column), centered vertically -->
+        <!-- Row layout: 90px label | 280px lane | 84px count | 100px [DISPATCHER HERE] | 100px clientIP | ... -->
+        <!-- Left = 90+14 + 280+14 + 84+14 + 0 = 496px from left of clients div -->
+        <div id="dispatcherWrapper" style="position:absolute;top:50%;left:496px;transform:translateY(-50%);width:100px;display:flex;flex-direction:column;align-items:center;pointer-events:none;">
+          <div class="dispatcher-status" id="dispatcherStatus" style="pointer-events:auto;width:100px;">
+            <div class="dispatcher-status-label">DISPATCHER</div>
+            <div class="dispatcher-status-ip">Idle</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-panel" id="demoPanel">
+    <div class="demo-row">
+      <span class="demo-panel-title">☠ Dead lane</span>
+      <span class="demo-phase" data-p="1">1 Accumulate</span><span class="demo-arrow">›</span>
+      <span class="demo-phase" data-p="2">2 Lane disconnected</span><span class="demo-arrow">›</span>
+      <span class="demo-phase" data-p="3">3 Allocator round-robin</span><span class="demo-arrow">›</span>
+      <span class="demo-phase" data-p="4">4 Done</span>
+      <span class="demo-status" id="demoStatus"></span>
+      <button type="button" class="demo-close" id="demoClose" title="Hide">✕</button>
+    </div>
+    <div class="demo-row" id="demoTally"></div>
+    <div class="demo-row demo-log" id="demoLog"></div>
+  </div>
+
+  <footer>V2: Each IP has 5 color slots. Each slot processes messages sequentially (one at a time). When a slot empties, it becomes available for new colors. Total concurrency per IP = number of allocated slots (max 5).</footer>
+</div>
+
+<script>
+const PALETTE = [
+  { name:'red',      css:'#F94144' },
+  { name:'yellow',   css:'#F9C74F' },
+  { name:'green',    css:'#43AA8B' },
+  { name:'violet',   css:'#9B5DE5' },
+  { name:'blue',     css:'#4CC9F0' },
+  { name:'orange',   css:'#F3722C' },
+  { name:'pink',     css:'#FF6B9D' },
+  { name:'teal',     css:'#2EC4B6' },
+  { name:'lime',     css:'#A8E63D' },
+  { name:'indigo',   css:'#5C6BC0' },
+  { name:'magenta',  css:'#E040FB' },
+  { name:'mint',     css:'#00E676' },
+  { name:'brown',    css:'#A0522D' },
+  { name:'royal',    css:'#2962FF' },
+  { name:'amber',    css:'#FF9F1C' },
+  { name:'crimson',  css:'#B71C1C' },
+  { name:'purple',   css:'#7B1FA2' },
+  { name:'cyan',     css:'#00E5FF' },
+  { name:'olive',    css:'#9E9D24' },
+  { name:'lavender', css:'#B39DDB' },
+  { name:'coral',    css:'#FF8A80' },
+  { name:'forest',   css:'#1B8A3E' },
+  { name:'peach',    css:'#FFD0A0' },
+  { name:'petrol',   css:'#00897B' },
+  { name:'silver',   css:'#CFD8DC' },
+  { name:'slate',    css:'#78909C' },
+  { name:'fuchsia',  css:'#D81B60' },
+  { name:'mustard',  css:'#C9A227' },
+  { name:'rose',     css:'#F8BBD0' },
+  { name:'tan',      css:'#D7B98E' }
+];
+
+const SPEED_PX_PER_SEC = 140;
+const DROPLET_SIZE = 30;
+const MAIN_SLOT_SPACING = 42;
+const DISPATCHER_CYCLE_MS = 100;
+const LANE_WIDTH = 280;
+const LANE_VISIBLE = 6;   // droplets drawn in a lane; the rest collapse into a +N badge
+let MAX_COLOR_SLOTS = 5;  // configurable — number of distinct color slots per client
+
+const legendEl = document.getElementById('legend');
+const manualPanel = document.getElementById('manualPanel');
+const manualColorButtons = document.getElementById('manualColorButtons');
+const modeAutoBtn = document.getElementById('modeAutoBtn');
+const modeManualBtn = document.getElementById('modeManualBtn');
+const mainPipe = document.getElementById('mainPipe');
+const sourceLabel = document.getElementById('sourceLabel');
+const blockedLabel = document.getElementById('blockedLabel');
+const clientsEl = document.getElementById('clients');
+const ipSlotsEl = document.getElementById('ipSlots');
+const clientCount = document.getElementById('clientCount');
+const clientMinus = document.getElementById('clientMinus');
+const clientPlus = document.getElementById('clientPlus');
+const colorMinus = document.getElementById('colorMinus');
+const colorPlus = document.getElementById('colorPlus');
+const colorCountEl = document.getElementById('colorCount');
+const demoPanel = document.getElementById('demoPanel');
+const demoStatusEl = document.getElementById('demoStatus');
+const demoTallyEl = document.getElementById('demoTally');
+const demoLogEl = document.getElementById('demoLog');
+const demoHintEl = document.getElementById('demoHint');
+const demoIpsInput = document.getElementById('demoIpsInput');
+const demoColorsInput = document.getElementById('demoColorsInput');
+const demoMsgsInput = document.getElementById('demoMsgsInput');
+const demoDelayInput = document.getElementById('demoDelayInput');
+const demoKillAfterInput = document.getElementById('demoKillAfterInput');
+const demoRedistInput = document.getElementById('demoRedistInput');
+const demoFreezeInput = document.getElementById('demoFreezeInput');
+
+const colorsInput = document.getElementById('colorsInput');
+const clientsInput = document.getElementById('clientsInput');
+const queueCapacityInput = document.getElementById('queueCapacityInput');
+const producerSpeedInput = document.getElementById('producerSpeedInput');
+const execTimeInput = document.getElementById('execTimeInput');
+const clientExecTimeInput = document.getElementById('clientExecTimeInput');
+const colorSlotsInput = document.getElementById('colorSlotsInput');
+document.getElementById('applyBtn').addEventListener('click', rebuild);
+modeAutoBtn.addEventListener('click', ()=>setMode('auto'));
+modeManualBtn.addEventListener('click', ()=>setMode('manual'));
+clientMinus.addEventListener('click', ()=>requestRemoveClient());
+clientPlus.addEventListener('click', ()=>addClient());
+
+let RUN_ID = 0;
+let COLOR_NAMES = [];
+let COLOR_VARS = {};
+let EXEC_TIME_MS = 1000;
+let QUEUE_CAPACITY = 6;
+let PRODUCER_SPEED_MS = 800;
+let CLIENT_EXEC_TIME_MS = 500;
+let MODE = 'auto';
+
+let mainQueue = [];
+let deadLaneQueue = []; // Priority buffer: drained before mainQueue when a client dies
+let clients = [];
+let clientSeq = 0;
+let colorToClientMap = new Map();
+let hubRotation = 0;
+let hubFlashTimer = null;
+let overflowBadgeEl = null;
+let lastAllocatedClientIdx = -1;
+let ACTIVE_COLOR_COUNT = 8;   // how many palette colors are in use right now (changeable at runtime)
+let DISPATCH_PAUSED = false;  // demo can freeze the dispatcher so lanes visibly pile up
+let deadDrainBusy = false;    // a dead-lane message is in flight (or the "lane died" beat is running)
+let deadHoldUntil = 0;        // dead lane is shown as disconnected for a moment before draining starts
+let deadTotal = 0, deadMoved = 0;
+let demoTally = {}, demoMoves = 0;
+const DEAD_BEAT_MS = 900;
+
+function setMode(mode){
+  MODE = mode;
+  modeAutoBtn.classList.toggle('active', mode === 'auto');
+  modeManualBtn.classList.toggle('active', mode === 'manual');
+  manualPanel.classList.toggle('visible', mode === 'manual');
+}
+
+function buildManualButtons(){
+  manualColorButtons.innerHTML = '';
+  COLOR_NAMES.forEach(name=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'manual-color-btn';
+    btn.title = name;
+    btn.style.background = COLOR_VARS[name];
+    btn.addEventListener('click', ()=>routeNewMessage(name));
+    manualColorButtons.appendChild(btn);
+  });
+}
+
+function clampInt(val, min, max, fallback){
+  const n = parseInt(val, 10);
+  if(isNaN(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function buildLegend(){
+  legendEl.innerHTML = '';
+  const compact = COLOR_NAMES.length > 10;   // many colors: swatches only (name in tooltip)
+  COLOR_NAMES.forEach(name=>{
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.title = name;
+    const sw = document.createElement('span');
+    sw.className = 'swatch' + (compact ? ' compact' : '');
+    sw.style.background = COLOR_VARS[name];
+    item.appendChild(sw);
+    if(!compact) item.appendChild(document.createTextNode(name[0].toUpperCase()+name.slice(1)));
+    legendEl.appendChild(item);
+  });
+}
+
+// Change how many colors are in use WITHOUT restarting the simulation.
+// COLOR_VARS always holds the whole palette, so droplets/slots of a color that was
+// switched off keep rendering until they are processed; only NEW messages stop using it.
+function setActiveColors(n){
+  ACTIVE_COLOR_COUNT = clampInt(n, 1, PALETTE.length, 8);
+  COLOR_NAMES = PALETTE.slice(0, ACTIVE_COLOR_COUNT).map(c=>c.name);
+  colorsInput.value = ACTIVE_COLOR_COUNT;
+  colorCountEl.textContent = ACTIVE_COLOR_COUNT;
+  colorMinus.disabled = ACTIVE_COLOR_COUNT <= 1;
+  colorPlus.disabled = ACTIVE_COLOR_COUNT >= PALETTE.length;
+  buildLegend();
+  buildManualButtons();
+  if(typeof updateDemoHint === 'function') updateDemoHint();
+}
+colorMinus.addEventListener('click', ()=>setActiveColors(ACTIVE_COLOR_COUNT - 1));
+colorPlus.addEventListener('click', ()=>setActiveColors(ACTIVE_COLOR_COUNT + 1));
+
+function mainWidthFor(capacity){
+  const needed = Math.max(capacity - 1, 0)*MAIN_SLOT_SPACING + DROPLET_SIZE + 16;
+  return Math.max(200, Math.min(480, needed));
+}
+
+function createClientRow(insertDispatcher){
+  clientSeq++;
+  const ip = `192.168.1.${10 + clientSeq}`;
+
+  const row = document.createElement('div');
+  row.className = 'client-row';
+
+  const label = document.createElement('div');
+  label.className = 'client-label';
+  label.textContent = ip;
+
+  const pipe = document.createElement('div');
+  pipe.className = 'pipe client-pipe';
+  pipe.style.width = LANE_WIDTH + 'px';
+
+  const overflowBadge = document.createElement('div');
+  overflowBadge.className = 'client-overflow-badge';
+  pipe.appendChild(overflowBadge);
+
+  const count_ = document.createElement('div');
+  count_.className = 'client-count';
+  count_.textContent = 'Queue 0/∞';
+
+  row.appendChild(label);
+  row.appendChild(pipe);
+  row.appendChild(count_);
+
+  // Always show spacer here; dispatcher is shown globally above clients
+  const spacer = document.createElement('div');
+  spacer.style.flex = '0 0 100px';
+  spacer.style.width = '100px';
+  row.appendChild(spacer);
+
+  // Client IP box (for display)
+  const clientIpLane = document.createElement('div');
+  clientIpLane.className = 'dispatcher-status';
+  clientIpLane.style.flex = '0 0 100px';
+  clientIpLane.innerHTML = `<div class="dispatcher-status-label">CLIENT IP</div><div class="dispatcher-status-ip">${ip}</div>`;
+  row.appendChild(clientIpLane);
+
+  // Client task slots display (5 circles showing client-side queue)
+  const clientStatEl = document.createElement('div');
+  clientStatEl.style.display = 'flex';
+  clientStatEl.style.flexDirection = 'column';
+  clientStatEl.style.alignItems = 'center';
+  clientStatEl.style.gap = '4px';
+  const clientStatLabel = document.createElement('div');
+  clientStatLabel.style.cssText = 'font-size:8px;letter-spacing:0.8px;opacity:0.7;text-transform:uppercase;color:var(--muted);';
+  clientStatLabel.textContent = 'CLIENT QUEUE';
+  const clientSlotRow = document.createElement('div');
+  clientSlotRow.style.cssText = 'display:flex;gap:9px;align-items:center;';
+  for(let i = 0; i < MAX_COLOR_SLOTS; i++){
+    const circle = document.createElement('div');
+    circle.className = 'color-slot';
+    const cnt = document.createElement('div');
+    cnt.className = 'slot-count';
+    cnt.textContent = '0';
+    circle.appendChild(cnt);
+    clientSlotRow.appendChild(circle);
+  }
+  clientStatEl.appendChild(clientStatLabel);
+  clientStatEl.appendChild(clientSlotRow);
+  row.appendChild(clientStatEl);
+
+  // Color slots display (5 circles)
+  const slotsContainer = document.createElement('div');
+  slotsContainer.className = 'color-slots';
+  for(let i=0; i<MAX_COLOR_SLOTS; i++){
+    const slot = document.createElement('div');
+    slot.className = 'color-slot';
+    const count = document.createElement('div');
+    count.className = 'slot-count';
+    count.textContent = '0';
+    slot.appendChild(count);
+    slotsContainer.appendChild(slot);
+  }
+
+  // Slots live in the Configurations panel, under the IP label
+  const group = document.createElement('div');
+  group.className = 'ip-group';
+  const groupLabel = document.createElement('div');
+  groupLabel.className = 'ip-group-label';
+  groupLabel.textContent = `ip${clientSeq}: ${ip}`;
+  group.appendChild(groupLabel);
+  group.appendChild(slotsContainer);
+  ipSlotsEl.appendChild(group);
+
+  clientsEl.appendChild(row);
+
+  const client = {
+    ip,
+    rowEl: row,
+    groupEl: group,
+    el: pipe,
+    overflowBadgeEl: overflowBadge,
+    labelEl: label,
+    countEl: count_,
+    clientIpEl: clientIpLane,
+    clientStatEl: clientStatEl,
+    slotsEl: slotsContainer,
+    lane: [],
+    colorSlots: Array.from({length: MAX_COLOR_SLOTS}, () =>
+      ({ color: null, queue: [], inFlight: 0, processed: 0, totalCount: 0 })
+    ),
+    pendingRemoval: false,
+    totalPending: 0,
+    totalProcessed: 0
+  };
+
+  return client;
+}
+
+function buildClients(count){
+  clientsEl.innerHTML = '';
+  ipSlotsEl.innerHTML = '';
+  clients = [];
+  clientSeq = 0;
+  colorToClientMap.clear();
+  for(let i=0;i<count;i++){
+    clients.push(createClientRow());
+  }
+  updateClientToolbar();
+  
+  // Position dispatcher wrapper over the spacer column of first row
+  requestAnimationFrame(()=>{
+    if(clients.length > 0){
+      const spacer = clients[0].rowEl.children[3]; // 4th child = spacer
+      const wrapper = document.getElementById('dispatcherWrapper');
+      const clientsRect = clientsEl.getBoundingClientRect();
+      const spacerRect = spacer.getBoundingClientRect();
+      wrapper.style.left = (spacerRect.left - clientsRect.left) + 'px';
+    }
+  });
+}
+
+function updateClientToolbar(){
+  clientCount.textContent = clients.length;
+  clientMinus.disabled = clients.length <= 1;
+}
+
+function addClient(){
+  clients.push(createClientRow(false));
+  updateClientToolbar();
+  tryDispatchFront();
+}
+
+function requestRemoveClient(){
+  if(clients.length <= 1) return;
+  
+  // Find a client that is fully idle (no active slots) — remove immediately
+  let target = clients.slice().reverse().find(c => {
+    return c.colorSlots.every(slot => slot.color === null) && !c.pendingRemoval;
+  });
+  
+  if(target){
+    removeClientNow(target);
+    return;
+  }
+
+  // Find a busy client — mark for removal and force-remove NOW
+  // Don't wait for graceful drain — user explicitly clicked remove
+  target = clients.slice().reverse().find(c => !c.pendingRemoval);
+  if(!target) return;
+
+  // Immediately remove — dead lane recovery handles pending messages
+  removeClientNow(target);
+}
+
+// Dead lanes: array of ghost lane objects kept alive after client removal
+let deadLanes = [];
+
+function removeClientNow(client){
+  // Collect lane messages in FIFO order (index 0 = oldest)
+  const deadMessages = [...client.lane];
+
+  // Free color-to-client mappings
+  client.colorSlots.forEach(slot => {
+    if(slot.color) colorToClientMap.delete(slot.color);
+  });
+
+  // Cancel stale client-side callbacks
+  client.taskQueue = [];
+  client.clientProcessing = false;
+  client._currentTask = null;
+
+  // Remove from clients array (disconnects from dispatcher + normal allocator)
+  const idx = clients.indexOf(client);
+  if(idx !== -1){
+    clients.splice(idx, 1);
+    // keep the round-robin pointer on the same client after the array shifts
+    if(idx <= lastAllocatedClientIdx) lastAllocatedClientIdx--;
+  }
+  if(lastAllocatedClientIdx >= clients.length){
+    lastAllocatedClientIdx = Math.max(-1, clients.length - 1);
+  }
+  updateClientToolbar();
+
+  // Remove from Configurations panel
+  client.groupEl.remove();
+
+  if(deadMessages.length === 0){
+    // No pending messages — fully remove the row too
+    client.rowEl.remove();
+    tryDispatchFront();
+    return;
+  }
+
+  // ── Dead Lane: keep the row visible as a ghost ──
+  // The lane pipe stays on screen showing the pending messages.
+  // It is disconnected from the dispatcher (dispatcher won't pick from it).
+  // The ALLOCATOR drains it directly, one message at a time, before processing mainQueue.
+  client.rowEl.classList.add('disconnecting', 'dead', 'just-died');
+  setTimeout(()=>client.rowEl.classList.remove('just-died'), 2600);
+  client.labelEl.textContent = `[DEAD] ${client.ip}`;
+  client.labelEl.style.color = '#F94144';
+  client.countEl.textContent = `PRE-QUEUE (${deadMessages.length})`;
+
+  // Hide client IP box and client queue circles (no longer processing)
+  if(client.clientIpEl) client.clientIpEl.style.display = 'none';
+  if(client.clientStatEl) client.clientStatEl.style.display = 'none';
+
+  // Add to deadLanes list and deadLaneQueue buffer
+  const deadLane = { client, messages: deadMessages };
+  deadLanes.push(deadLane);
+
+  // Populate deadLaneQueue from these messages (FIFO)
+  deadMessages.forEach(item => deadLaneQueue.push({ color: item.color, laneEl: item.el, item, deadLane }));
+
+  // New dead-lane event: reset the progress panel (unless one is still being drained)
+  if(!deadDrainBusy && deadTotal === 0){
+    deadMoved = 0; demoTally = {}; demoMoves = 0; demoLogEl.innerHTML = '';
+  }
+  deadTotal += deadMessages.length;
+  clients.forEach(c => { if(!(c.ip in demoTally)) demoTally[c.ip] = 0; });
+  renderDemoTally();
+  setDemoPhase(2, `${client.ip} disconnected — ${deadMessages.length} messages stranded in its lane`);
+
+  // Show the lane as dead for a beat, THEN the allocator starts pulling from it
+  deadHoldUntil = performance.now() + DEAD_BEAT_MS;
+  setAllocatorLabel(`DEAD LANE DETECTED (${deadLaneQueue.length})`);
+  requestAnimationFrame(() => setTimeout(() => tryDispatchFront(), 0));
+}
+
+// Remove a dead lane row once all its messages are drained
+function cleanupDeadLane(deadLane){
+  const row = deadLane.client.rowEl;
+  const i = deadLanes.indexOf(deadLane);
+  if(i !== -1) deadLanes.splice(i, 1);
+  row.style.opacity = '0';
+  setTimeout(()=>row.remove(), 400);
+}
+
+function relayoutDeadAndMain(){
+  relayoutMainQueue();
+}
+
+function relayoutLane(client){
+  const ex = exitX(client.el);
+  client.lane.forEach((item, i)=>{
+    if(i >= LANE_VISIBLE){
+      item.el.style.display = 'none';
+      return;
+    }
+    item.el.style.display = '';
+    animateTo(item.el, ex - i*MAIN_SLOT_SPACING);
+  });
+  const overflow = client.lane.length - LANE_VISIBLE;
+  if(overflow > 0){
+    client.overflowBadgeEl.textContent = '+' + overflow;
+    client.overflowBadgeEl.style.display = 'block';
+  } else {
+    client.overflowBadgeEl.style.display = 'none';
+  }
+}
+
+// A message arriving in a lane: goes into its color slot's queue AND is drawn in the lane
+function enqueueToLane(client, slot, color){
+  const el = document.createElement('div');
+  el.className = 'droplet';
+  el.style.background = COLOR_VARS[color];
+  el.style.left = '-' + DROPLET_SIZE + 'px';
+  client.el.appendChild(el);
+
+  const item = { color, el };
+  slot.queue.push(item);
+  client.lane.push(item);
+  slot.totalCount = (slot.totalCount || 0) + 1; // increment when enters lane
+  if(slot.inFlight === undefined) slot.inFlight = 0;
+  relayoutLane(client);
+}
+
+// Dispatcher picks the next message of a slot: remove it from the slot queue and from the lane
+function dequeueFromLane(client, slot){
+  const item = slot.queue.shift();
+  if(!item) return;
+  item.el.remove();
+  const idx = client.lane.indexOf(item);
+  if(idx !== -1) client.lane.splice(idx, 1);
+  relayoutLane(client);
+}
+
+function updateClientDisplay(client){
+    // Lane queue is unbounded: show messages waiting in this lane out of ∞
+  const queuedCount = client.colorSlots.reduce((sum, s) => sum + s.queue.length, 0);
+  client.countEl.textContent = `Queue ${queuedCount}/∞`;
+  
+  // Update visual slots
+  const slotEls = client.slotsEl.querySelectorAll('.color-slot');
+  client.colorSlots.forEach((slot, idx) => {
+    const slotEl = slotEls[idx];
+    const countEl = slotEl.querySelector('.slot-count');
+    
+    if(slot.color){
+      slotEl.classList.add('filled');
+      slotEl.style.background = COLOR_VARS[slot.color];
+      slotEl.style.borderColor = COLOR_VARS[slot.color];
+      // totalCount = messages in lane + in dispatcher + in client queue
+      // It increments on enqueueToLane, decrements only after client finishes
+      countEl.textContent = slot.totalCount || 0;
+    } else {
+      slotEl.classList.remove('filled');
+      slotEl.style.background = 'var(--panel)';
+      slotEl.style.borderColor = 'var(--pipe-edge)';
+      countEl.textContent = '0';
+    }
+  });
+}
+
+function randomColor(){
+  return COLOR_NAMES[Math.floor(Math.random()*COLOR_NAMES.length)];
+}
+
+function exitX(pipeEl){
+  return pipeEl.clientWidth - DROPLET_SIZE;
+}
+
+function currentLeft(el){
+  return parseFloat(getComputedStyle(el).left) || 0;
+}
+
+function animateTo(el, target){
+  const current = currentLeft(el);
+  const dist = Math.abs(target - current);
+  const dur = Math.max(dist / SPEED_PX_PER_SEC, 0.15);
+  requestAnimationFrame(()=>{
+    el.style.transition = `left ${dur}s linear`;
+    requestAnimationFrame(()=>{ el.style.left = target + 'px'; });
+  });
+}
+
+function relayoutMainQueue(){
+  const ex = exitX(mainPipe);
+  let visibleCount = 0;
+  mainQueue.forEach((item)=>{
+    const pos = ex - visibleCount*MAIN_SLOT_SPACING;
+    if(pos < -DROPLET_SIZE){ item.el.style.display = 'none'; return; }
+    item.el.style.display = '';
+    animateTo(item.el, Math.max(0, pos));
+    visibleCount++;
+  });
+  if(overflowBadgeEl){
+    const overflow = mainQueue.length - visibleCount;
+    if(overflow > 0){ overflowBadgeEl.textContent = '+' + overflow; overflowBadgeEl.style.display = 'flex'; }
+    else { overflowBadgeEl.style.display = 'none'; }
+  }
+}
+
+function updateSourceLabel(){
+  sourceLabel.textContent = `MAIN QUEUE (${mainQueue.length}/${QUEUE_CAPACITY})`;
+}
+
+function createMessage(color){
+  if(mainQueue.length >= QUEUE_CAPACITY) return false;
+
+  const el = document.createElement('div');
+  el.className = 'droplet';
+  el.style.background = COLOR_VARS[color];
+  el.style.left = '-' + DROPLET_SIZE + 'px';
+  const runId = RUN_ID;
+  el.addEventListener('transitionend', (e)=>{
+    if(e.propertyName === 'left' && runId === RUN_ID) tryDispatchFront();
+  });
+  mainPipe.appendChild(el);
+
+  mainQueue.push({ color, el });
+  updateSourceLabel();
+  relayoutMainQueue();
+  
+  // Dispatch immediately regardless of mode
+  setTimeout(()=>tryDispatchFront(), 50);
+  return true;
+}
+
+function routeNewMessage(color){
+  return createMessage(color);
+}
+
+// Route a dead lane message directly into the allocator (bypasses mainQueue, no DOM element)
+function routeDeadMessage(color){
+  pulseHub(color);
+  
+  // Check if already allocated to another client
+  const existingClient = colorToClientMap.get(color);
+  if(existingClient && !existingClient.pendingRemoval){
+    const slot = existingClient.colorSlots.find(s => s.color === color);
+    if(slot){
+      enqueueToLane(existingClient, slot, color);
+      updateClientDisplay(existingClient);
+      return;
+    }
+  }
+  
+  // Allocate fresh to next available client (round-robin)
+  let clientWithSlot = null;
+  let attempts = 0;
+  while(!clientWithSlot && attempts < clients.length){
+    lastAllocatedClientIdx = (lastAllocatedClientIdx + 1) % clients.length;
+    const candidate = clients[lastAllocatedClientIdx];
+    if(!candidate.pendingRemoval && candidate.colorSlots.some(s => s.color === null)){
+      clientWithSlot = candidate;
+    }
+    attempts++;
+  }
+  
+  if(!clientWithSlot){
+    // No room — put back in deadLaneQueue to retry
+    deadLaneQueue.unshift({ color });
+    return;
+  }
+  
+  const emptySlot = clientWithSlot.colorSlots.find(s => s.color === null);
+  emptySlot.color = color;
+  colorToClientMap.set(color, clientWithSlot);
+  enqueueToLane(clientWithSlot, emptySlot, color);
+  updateClientDisplay(clientWithSlot);
+}
+
+function spawnMainMessage(runId){
+  if(runId !== RUN_ID) return;
+
+  if(MODE === 'auto'){
+    routeNewMessage(randomColor());
+  }
+
+  const next = MODE === 'auto' ? PRODUCER_SPEED_MS : 300;
+  setTimeout(()=>spawnMainMessage(runId), next);
+}
+
+function pulseHub(color){
+  const ringColor = COLOR_VARS[color] || 'transparent';
+  hubRotation += 45;
+  document.getElementById('hubValve').style.transform = 'rotate(' + hubRotation + 'deg)';
+  document.getElementById('hubCore').style.boxShadow = '0 0 0 5px ' + ringColor;
+  clearTimeout(hubFlashTimer);
+  hubFlashTimer = setTimeout(()=>{ document.getElementById('hubCore').style.boxShadow = '0 0 0 0 transparent'; }, 380);
+}
+
+function tryDispatchFront(){
+  // ── Priority 1: dead-lane messages are re-allocated first, one visible hop at a time ──
+  if(deadLaneQueue.length > 0 || deadDrainBusy){
+    drainDeadLane();
+    return;
+  }
+
+  // ── Priority 2: process normal mainQueue ──
+  if(mainQueue.length === 0){
+    blockedLabel.textContent = 'FLOWING';
+    blockedLabel.classList.remove('blocked');
+    return;
+  }
+
+  const front = mainQueue[0];
+  const dispatched = dispatchItem(front.color, front.el, false);
+  if(dispatched){
+    mainQueue.shift();
+    updateSourceLabel();
+    relayoutMainQueue();
+    tryDispatchFront();
+  } else {
+    blockedLabel.textContent = `BLOCKED (${mainQueue.length} waiting)`;
+    blockedLabel.classList.add('blocked');
+  }
+}
+
+// Decide where a color goes: its current lane (same-color messages stay together),
+// otherwise the next lane with a free color slot, round-robin. Reserves the slot.
+function pickTarget(color){
+  const existingClient = colorToClientMap.get(color);
+  if(existingClient && !existingClient.pendingRemoval && clients.includes(existingClient)){
+    const slot = existingClient.colorSlots.find(s => s.color === color);
+    if(slot) return { client: existingClient, slot, mode: 'same lane' };
+  }
+
+  let clientWithSlot = null;
+  let attempts = 0;
+  while(!clientWithSlot && attempts < clients.length){
+    lastAllocatedClientIdx = (lastAllocatedClientIdx + 1) % clients.length;
+    const candidate = clients[lastAllocatedClientIdx];
+    if(!candidate.pendingRemoval && candidate.colorSlots.some(s => s.color === null)){
+      clientWithSlot = candidate;
+      break;
+    }
+    attempts++;
+  }
+  if(!clientWithSlot) return null;
+
+  const emptySlot = clientWithSlot.colorSlots.find(s => s.color === null);
+  emptySlot.color = color;
+  colorToClientMap.set(color, clientWithSlot);
+  return { client: clientWithSlot, slot: emptySlot, mode: 'new slot' };
+}
+
+// Core allocation logic. Returns true if dispatched successfully.
+function dispatchItem(color, laneEl, isDeadLane){
+  const target = pickTarget(color);
+  if(!target) return false;
+  pulseHub(color);
+  if(laneEl) laneEl.remove();
+  enqueueToLane(target.client, target.slot, color);
+  updateClientDisplay(target.client);
+  return true;
+}
+
+function setAllocatorLabel(text){
+  blockedLabel.textContent = text;
+  blockedLabel.classList.add('blocked');
+}
+
+// ── Dead lane: allocator pulls the stranded messages one by one (FIFO) and hands each to a live lane ──
+function drainDeadLane(){
+  if(deadDrainBusy) return;
+  const runId = RUN_ID;
+
+  // beat: let the person see the lane die before anything moves
+  const wait = deadHoldUntil - performance.now();
+  if(wait > 0){
+    deadDrainBusy = true;
+    setAllocatorLabel(`DEAD LANE DETECTED (${deadLaneQueue.length})`);
+    setTimeout(()=>{ if(runId !== RUN_ID) return; deadDrainBusy = false; tryDispatchFront(); }, wait);
+    return;
+  }
+
+  const entry = deadLaneQueue[0];
+  const target = pickTarget(entry.color);
+  if(!target){
+    // every live lane is full; retried whenever a client finishes a task
+    setAllocatorLabel(`DEAD LANE BLOCKED (${deadLaneQueue.length})`);
+    if(DISPATCH_PAUSED) DISPATCH_PAUSED = false;   // never deadlock the demo
+    return;
+  }
+
+  deadLaneQueue.shift();
+  deadDrainBusy = true;
+  deadMoved++;
+  setAllocatorLabel(`DEAD LANE → ROUND-ROBIN (${deadLaneQueue.length + 1} left)`);
+  setDemoPhase(3, `Allocator re-routing ${deadMoved}/${deadTotal}`);
+  demoLogMove(entry, target);
+
+  flyDeadMessage(entry, target, ()=>{
+    if(runId !== RUN_ID) return;
+    landDeadMessage(entry, target);
+    deadDrainBusy = false;
+    if(deadLaneQueue.length === 0) finishDeadRedistribution();
+    tryDispatchFront();
+  });
+}
+
+function removeFromDeadLane(entry){
+  if(entry.laneEl) entry.laneEl.remove();
+  const dl = entry.deadLane;
+  if(!dl) return;
+  const c = dl.client;
+  const i = c.lane.indexOf(entry.item);
+  if(i !== -1) c.lane.splice(i, 1);
+  relayoutLane(c);   // remaining droplets slide forward, +N badge updates
+  c.countEl.textContent = c.lane.length > 0 ? `PRE-QUEUE (${c.lane.length})` : 'DRAINED';
+}
+
+// droplet: dead lane → allocator hub → target lane
+function flyDeadMessage(entry, target, done){
+  const dur = clampInt(demoRedistInput.value, 0, 3000, 450);
+  const hubRect = document.getElementById('hubCore').getBoundingClientRect();
+  const hub = { x: hubRect.left + hubRect.width/2, y: hubRect.top + hubRect.height/2 };
+
+  let start = hub;
+  if(entry.deadLane){
+    let r = entry.laneEl ? entry.laneEl.getBoundingClientRect() : null;
+    if(!r || r.width === 0){   // droplet was collapsed into the +N badge: start from the lane exit
+      const pr = entry.deadLane.client.el.getBoundingClientRect();
+      r = { left: pr.right - DROPLET_SIZE - 8, top: pr.top + pr.height/2 - DROPLET_SIZE/2, width: DROPLET_SIZE, height: DROPLET_SIZE };
+    }
+    start = { x: r.left + r.width/2, y: r.top + r.height/2 };
+  }
+  const tr = target.client.el.getBoundingClientRect();
+  const end = { x: tr.left + DROPLET_SIZE/2 + 8, y: tr.top + tr.height/2 };
+
+  removeFromDeadLane(entry);
+
+  if(dur === 0){ pulseHub(entry.color); done(); return; }
+
+  const fly = document.createElement('div');
+  fly.className = 'droplet flying';
+  fly.style.background = COLOR_VARS[entry.color];
+  document.body.appendChild(fly);
+
+  const at = p => `translate(${p.x - DROPLET_SIZE/2}px, ${p.y - DROPLET_SIZE/2}px)`;
+  let finished = false;
+  const finish = ()=>{ if(finished) return; finished = true; fly.remove(); done(); };
+  setTimeout(()=>pulseHub(entry.color), dur * 0.45);
+
+  if(typeof fly.animate === 'function'){
+    const anim = fly.animate([
+      { transform: at(start) + ' scale(1)' },
+      { transform: at(hub) + ' scale(0.75)', offset: 0.45 },
+      { transform: at(end) + ' scale(1)' }
+    ], { duration: dur, easing: 'ease-in-out', fill: 'forwards' });
+    anim.onfinish = finish;
+  }
+  setTimeout(finish, dur + 80);   // safety net
+}
+
+function landDeadMessage(entry, target){
+  const { client, slot } = target;
+  const color = entry.color;
+  let placed = false;
+
+  if(clients.includes(client)){
+    if(slot.color === null){ slot.color = color; colorToClientMap.set(color, client); }  // slot freed mid-flight
+    if(slot.color === color){
+      enqueueToLane(client, slot, color);
+      updateClientDisplay(client);
+      client.el.classList.add('receiving');
+      setTimeout(()=>client.el.classList.remove('receiving'), 500);
+      placed = true;
+    }
+  }
+  // target died / slot got taken while in flight → allocate again
+  if(!placed && !dispatchItem(color, null, true)) deadLaneQueue.unshift({ color });
+
+  const dl = entry.deadLane;
+  if(dl && dl.client.lane.length === 0) cleanupDeadLane(dl);
+}
+
+function finishDeadRedistribution(){
+  if(deadTotal === 0) return;
+  const ipsHit = Object.values(demoTally).filter(n => n > 0).length;
+  setDemoPhase(4, `Done — ${deadTotal} messages re-allocated across ${ipsHit} IPs`);
+  deadTotal = 0; deadMoved = 0;
+  DISPATCH_PAUSED = false;
+}
+
+// Dispatcher: single-threaded. One task at a time for EXEC_TIME_MS.
+// After delivery, immediately picks next ready slot (round-robin).
+// Blocked only when all slots across all clients are full (in-flight).
+// Client: single-threaded FIFO. Processes tasks one at a time per client.
+//         Up to 5 tasks can be queued (one per color slot). Processes them sequentially.
+function dispatcherCycle(runId){
+  if(runId !== RUN_ID) return;
+  
+  const dispatcherEl = document.getElementById('dispatcherStatus');
+  let dispatcherBusy = false;
+  let lastDispatchClientIdx = -1;
+  
+  // Client has a single processing thread (FIFO queue of tasks)
+  // Each slot that gets dispatched queues into clientTaskQueue
+  function updateClientStats(client){
+    if(!client.clientStatEl) return;
+    const slotRow = client.clientStatEl.querySelector('div:last-child');
+    if(!slotRow) return;
+    
+    const circles = slotRow.querySelectorAll('.color-slot');
+    
+    // Build the list of tasks: currently processing + queued
+    const allTasks = [];
+    if(client.clientProcessing && client._currentTask){
+      allTasks.push(client._currentTask);
+    }
+    (client.taskQueue || []).forEach(t => allTasks.push(t));
+    
+    // Always show MAX_COLOR_SLOTS circles. First = in-progress (glow), rest = queued or empty
+    circles.forEach((circle, i) => {
+      const countEl = circle.querySelector('.slot-count');
+      if(countEl) countEl.style.display = 'none';
+      circle.style.display = ''; // always visible
+      
+      if(i < allTasks.length){
+        const taskColor = allTasks[i].taskColor;
+        circle.classList.add('filled');
+        circle.style.background = COLOR_VARS[taskColor];
+        circle.style.borderColor = COLOR_VARS[taskColor];
+        // First circle = currently in-progress: glowing outline (outline doesn't affect layout)
+        if(i === 0){
+          circle.style.outline = `3px solid ${COLOR_VARS[taskColor]}`;
+          circle.style.outlineOffset = '2px';
+        } else {
+          circle.style.outline = '';
+          circle.style.outlineOffset = '';
+        }
+      } else {
+        // Empty slot — show as available (hollow)
+        circle.classList.remove('filled');
+        circle.style.background = 'var(--panel)';
+        circle.style.borderColor = 'var(--pipe-edge)';
+        circle.style.boxShadow = '';
+        circle.style.outline = '';
+        circle.style.outlineOffset = '';
+      }
+    });
+  }
+  
+  function startClientTask(client, slot, taskColor){
+    // Add to client's sequential task queue FIRST, then update stats
+    client.taskQueue = client.taskQueue || [];
+    client.taskQueue.push({ slot, taskColor });
+    client.totalPending = (client.totalPending || 0) + 1;
+    updateClientStats(client); // now taskQueue has the new task, circles will show it
+    
+    // If client not already processing, start
+    if(!client.clientProcessing){
+      processNextClientTask(client);
+    }
+  }
+  
+  function processNextClientTask(client){
+    if(runId !== RUN_ID) return;
+    // Guard: if client was removed (not in clients array anymore), stop processing
+    if(!clients.includes(client)) return;
+    if(!client.taskQueue || client.taskQueue.length === 0){
+      client.clientProcessing = false;
+      client._currentTask = null; // clear current task so circles reset
+      updateClientStats(client);
+      // Reset client IP box when idle
+      if(client.clientIpEl){
+        client.clientIpEl.classList.remove('active');
+        client.clientIpEl.style.background = '';
+        client.clientIpEl.style.borderColor = '';
+        client.clientIpEl.style.color = '';
+        client.clientIpEl.innerHTML = `<div class="dispatcher-status-label">CLIENT IP</div><div class="dispatcher-status-ip">${client.ip}</div>`;
+      }
+      return;
+    }
+    
+    client.clientProcessing = true;
+    const task = client.taskQueue.shift();
+    const { slot, taskColor } = task;
+    client._currentTask = task; // track for stats display
+    updateClientStats(client);
+    
+    // Show client processing this color
+    if(client.clientIpEl){
+      client.clientIpEl.classList.add('active');
+      client.clientIpEl.style.background = COLOR_VARS[taskColor];
+      client.clientIpEl.style.borderColor = COLOR_VARS[taskColor];
+      client.clientIpEl.style.color = '#1a1a1a';
+      client.clientIpEl.innerHTML = `<div class="dispatcher-status-label">CLIENT IP</div><div class="dispatcher-status-ip">${client.ip}</div>`;
+    }
+    
+    setTimeout(()=>{
+      if(runId !== RUN_ID) return;
+      // Guard: if client was removed between dispatch and now, discard silently
+      if(!clients.includes(client)) return;
+
+      // Task done — ack received from client
+      slot.inFlight = 0;
+      slot.processed++;
+      // Decrement totalCount only NOW (after client finishes, not when dispatcher picks up)
+      slot.totalCount = Math.max(0, (slot.totalCount || 1) - 1);
+      client.totalPending = Math.max(0, (client.totalPending || 1) - 1);
+      client.totalProcessed = (client.totalProcessed || 0) + 1;
+      updateClientStats(client);
+      
+      // Only free the color slot if no more messages waiting AND no more in taskQueue for this color
+      const pendingInTaskQueue = (client.taskQueue || []).filter(t => t.slot === slot).length;
+      if(slot.queue.length === 0 && pendingInTaskQueue === 0){
+        colorToClientMap.delete(slot.color);
+        slot.color = null;
+      }
+      
+      updateClientDisplay(client);
+      
+      // NOTE: we no longer call removeClientNow from here since we do immediate removal now.
+      // client.pendingRemoval is effectively unused in current flow.
+      
+      // Unblock main queue if something was waiting
+      tryDispatchFront();
+      
+      // Process next task in client's queue (FIFO)
+      processNextClientTask(client);
+    }, CLIENT_EXEC_TIME_MS);
+  }
+  
+  function dispatchOneSlot(){
+    // Round-robin through clients, find a ready task.
+    // Within a client, respect FIFO: pick the slot whose OLDEST queued message came first.
+    // Use the lane array order — the first item in client.lane is the oldest message.
+    const total = clients.length;
+    
+    function findFifoSlotForClient(client){
+      // The dispatcher picks tasks from the lane and hands them to the client's task queue.
+      // The CLIENT QUEUE shows how many tasks the client is currently processing/queued.
+      // Cap: client processes at most MAX_COLOR_SLOTS tasks at a time (1 active + up to 4 queued).
+      // If the client's task queue is already at capacity, don't hand off more yet.
+      const clientSideCount = (client.taskQueue || []).length + (client.clientProcessing ? 1 : 0);
+      if(clientSideCount >= MAX_COLOR_SLOTS) return null; // client processing queue full
+
+      // Find the slot whose queue front matches the oldest item in the lane (FIFO)
+      for(const laneItem of client.lane){
+        const slot = client.colorSlots.find(s => s.queue.length > 0 && s.queue[0] === laneItem);
+        if(slot) return slot;
+      }
+      return null;
+    }
+    
+    for(let i = 0; i < total; i++){
+      lastDispatchClientIdx = (lastDispatchClientIdx + 1) % total;
+      const client = clients[lastDispatchClientIdx];
+      if(client.pendingRemoval) continue;
+      const slot = findFifoSlotForClient(client);
+      if(slot) return { client, slot };
+    }
+    
+    // Fallback: check all clients from start
+    for(let i = 0; i < total; i++){
+      const client = clients[i];
+      if(client.pendingRemoval) continue;
+      const slot = findFifoSlotForClient(client);
+      if(slot){
+        lastDispatchClientIdx = i;
+        return { client, slot };
+      }
+    }
+    
+    return null;
+  }
+  
+  function tick(){
+    if(runId !== RUN_ID) return;
+    
+    if(!dispatcherBusy){
+      const target = DISPATCH_PAUSED ? null : dispatchOneSlot();
+      
+      if(target){
+        const { client, slot } = target;
+        const taskColor = slot.color;
+        
+        // Mark dispatcher as busy for EXEC_TIME_MS
+        dispatcherBusy = true;
+        
+        // Remove the task from lane (dispatcher picks it up)
+        dequeueFromLane(client, slot);
+        slot.inFlight = 1;
+        updateClientDisplay(client);
+        
+        // Show dispatcher delivering this task — force instant repaint (no CSS transition flash)
+        if(dispatcherEl){
+          dispatcherEl.style.transition = 'none';
+          dispatcherEl.classList.add('active');
+          dispatcherEl.style.background = COLOR_VARS[taskColor];
+          dispatcherEl.style.borderColor = COLOR_VARS[taskColor];
+          dispatcherEl.style.color = '#1a1a1a';
+          dispatcherEl.innerHTML = `<div class="dispatcher-status-label">DISPATCHER</div><div class="dispatcher-status-ip">${client.ip}</div>`;
+          // Re-enable transitions after paint
+          requestAnimationFrame(()=>{ dispatcherEl.style.transition = ''; });
+        }
+        
+        // After EXEC_TIME_MS, dispatcher hands off to client and becomes free
+        setTimeout(()=>{
+          if(runId !== RUN_ID) return;
+          
+          // Dispatcher delivered — now free
+          dispatcherBusy = false;
+          if(dispatcherEl){
+            dispatcherEl.classList.remove('active');
+            dispatcherEl.style.background = '';
+            dispatcherEl.style.borderColor = '';
+            dispatcherEl.style.color = '';
+            dispatcherEl.innerHTML = '<div class="dispatcher-status-label">DISPATCHER</div><div class="dispatcher-status-ip">Idle</div>';
+          }
+          
+          // Slot is now "in-flight at client" — mark as accepted by client
+          // Client processes FIFO one at a time
+          startClientTask(client, slot, taskColor);
+          
+        }, EXEC_TIME_MS);
+        
+      } else {
+        // No ready slots — dispatcher idle (or frozen by the demo)
+        if(dispatcherEl && !dispatcherEl.classList.contains('active')){
+          dispatcherEl.innerHTML = '<div class="dispatcher-status-label">DISPATCHER</div><div class="dispatcher-status-ip">' + (DISPATCH_PAUSED ? 'Paused' : 'Idle') + '</div>';
+        }
+      }
+    }
+    
+    setTimeout(tick, DISPATCHER_CYCLE_MS);
+  }
+  
+  tick();
+}
+
+function rebuild(){
+  RUN_ID++;
+  const thisRun = RUN_ID;
+  lastAllocatedClientIdx = -1;
+
+  const colorCount = clampInt(colorsInput.value, 1, PALETTE.length, 3);
+  const clientCount = clampInt(clientsInput.value, 1, 8, 3);
+  QUEUE_CAPACITY = clampInt(queueCapacityInput.value, 1, 20, 6);
+  PRODUCER_SPEED_MS = clampInt(producerSpeedInput.value, 100, 60000, 800);
+  EXEC_TIME_MS = clampInt(execTimeInput.value, 100, 300000, 60000);
+  CLIENT_EXEC_TIME_MS = clampInt(clientExecTimeInput.value, 10, 300000, 10000);
+  MAX_COLOR_SLOTS = clampInt(colorSlotsInput.value, 1, 10, 5);
+
+  colorsInput.value = colorCount;
+  clientsInput.value = clientCount;
+  queueCapacityInput.value = QUEUE_CAPACITY;
+  producerSpeedInput.value = PRODUCER_SPEED_MS;
+  execTimeInput.value = EXEC_TIME_MS;
+  clientExecTimeInput.value = CLIENT_EXEC_TIME_MS;
+  colorSlotsInput.value = MAX_COLOR_SLOTS;
+
+  // Update toolbar label to reflect current slot count
+  const toolbarLabel = document.getElementById('clientsToolbarLabel');
+  if(toolbarLabel) toolbarLabel.textContent = `CLIENTS (${MAX_COLOR_SLOTS} COLOR SLOTS/IP)`;
+
+  COLOR_VARS = {};
+  PALETTE.forEach(c=>{ COLOR_VARS[c.name] = c.css; });   // whole palette, so colors can be added/removed live
+
+  mainQueue = [];
+  deadLaneQueue = [];
+  deadLanes = [];
+  deadDrainBusy = false; deadHoldUntil = 0; deadTotal = 0; deadMoved = 0;
+  DISPATCH_PAUSED = false;
+  document.querySelectorAll('.droplet.flying').forEach(el => el.remove());
+  demoReset();
+  colorToClientMap.clear();
+  mainPipe.innerHTML = '';
+  mainPipe.style.width = mainWidthFor(QUEUE_CAPACITY) + 'px';
+  overflowBadgeEl = document.createElement('div');
+  overflowBadgeEl.className = 'client-overflow-badge';
+  mainPipe.appendChild(overflowBadgeEl);
+  blockedLabel.textContent = 'FLOWING';
+  blockedLabel.classList.remove('blocked');
+
+  // Immediately reset dispatcher UI
+  const dispEl = document.getElementById('dispatcherStatus');
+  if(dispEl){
+    dispEl.style.transition = 'none';
+    dispEl.classList.remove('active');
+    dispEl.style.background = '';
+    dispEl.style.borderColor = '';
+    dispEl.style.color = '';
+    dispEl.innerHTML = '<div class="dispatcher-status-label">DISPATCHER</div><div class="dispatcher-status-ip">Idle</div>';
+    requestAnimationFrame(()=>{ dispEl.style.transition = ''; });
+  }
+
+  setActiveColors(colorCount);
+  buildClients(clientCount);
+  updateSourceLabel();
+
+  spawnMainMessage(thisRun);
+  dispatcherCycle(thisRun);
+}
+
+// ─── Dead Lane Demo ───────────────────────────────────────────────────────────
+// One click:
+//   1. fresh simulation with N IPs and M colors
+//   2. a burst of messages (colors cycling) piles up in the lanes
+//   3. the busiest lane is killed  → ghost row, stays visible
+//   4. the allocator pulls its messages one by one and hands each to a live IP, round-robin
+// Sizing rules (see the hint line under the demo controls):
+//   • IPs ≥ 3            → one dies, at least two survive, so the spread is visible
+//   • colors = IPs×(IPs−1) → the dead lane holds IPs−1 colors, one per surviving IP
+//   • colors ≤ (IPs−1)×slots → survivors always have a free slot for the dead lane's colors
+//   • messages ≈ 4 per color → every lane grows past the 6 visible droplets (+N badge)
+// ─────────────────────────────────────────────────────────────────────────────
+document.getElementById('deadLaneDemoBtn').addEventListener('click', runDeadLaneDemo);
+[demoIpsInput, demoColorsInput, demoMsgsInput, colorSlotsInput].forEach(el => el.addEventListener('input', updateDemoHint));
+document.getElementById('demoClose').addEventListener('click', ()=> demoPanel.classList.remove('visible'));
+
+function demoSettings(){
+  const slots = clampInt(colorSlotsInput.value, 1, 10, 5);
+  const ips = clampInt(demoIpsInput.value, 3, 8, 4);
+  const maxColors = Math.max(2, Math.min(PALETTE.length, (ips - 1) * slots));   // survivors need room
+  const colors = clampInt(demoColorsInput.value, 2, maxColors, Math.min(ips * (ips - 1), maxColors));
+  const msgs = clampInt(demoMsgsInput.value, colors, 300, colors * 4);
+  return {
+    slots, ips, colors, msgs, maxColors,
+    delay: clampInt(demoDelayInput.value, 10, 2000, 40),
+    killDelay: clampInt(demoKillAfterInput.value, 0, 10000, 800),
+    freeze: demoFreezeInput.checked
+  };
+}
+
+function updateDemoHint(){
+  const d = demoSettings();
+  const perLane = Math.round(d.msgs / d.ips);
+  const colorsOnDead = Math.ceil(d.colors / d.ips);
+  demoHintEl.textContent =
+    `≈${perLane} msgs per lane (6 visible, rest as +N) · dead lane holds ~${colorsOnDead} colors → spread over ${d.ips - 1} IPs · ` +
+    `full spread needs colors = IPs×(IPs−1) = ${d.ips * (d.ips - 1)} · max colors for this setup: ${d.maxColors}`;
+}
+
+function runDeadLaneDemo(){
+  const d = demoSettings();
+  demoIpsInput.value = d.ips;
+  demoColorsInput.value = d.colors;
+  demoMsgsInput.value = d.msgs;
+  colorsInput.value = d.colors;
+  clientsInput.value = d.ips;
+
+  setMode('manual');      // no random producer competing with the scripted burst
+  rebuild();              // clean start
+  const runId = RUN_ID;
+  DISPATCH_PAUSED = d.freeze;
+
+  let sent = 0;
+  function sendNext(){
+    if(runId !== RUN_ID) return;
+    if(sent >= d.msgs){
+      setDemoPhase(1, `All ${d.msgs} messages injected — killing a lane in ${d.killDelay} ms…`);
+      setTimeout(killBusiestLane, d.killDelay);
+      return;
+    }
+    // if the main queue is momentarily full the message is retried, never silently dropped
+    if(routeNewMessage(COLOR_NAMES[sent % COLOR_NAMES.length])) sent++;
+    setDemoPhase(1, `Accumulating ${sent}/${d.msgs} · ${d.colors} colors → ${d.ips} IPs`);
+    setTimeout(sendNext, d.delay);
+  }
+
+  function killBusiestLane(){
+    if(runId !== RUN_ID) return;
+    if(clients.length < 2) return;
+    const target = clients.slice().sort((a, b) => b.lane.length - a.lane.length)[0];
+    removeClientNow(target);
+  }
+
+  sendNext();
+}
+
+// ── progress panel ──
+function setDemoPhase(n, text){
+  demoPanel.classList.add('visible');
+  demoPanel.querySelectorAll('.demo-phase').forEach(el => {
+    const p = +el.dataset.p;
+    el.classList.toggle('done', p < n);
+    el.classList.toggle('current', p === n);
+  });
+  if(text !== undefined) demoStatusEl.textContent = text;
+}
+
+function renderDemoTally(){
+  demoTallyEl.innerHTML = Object.entries(demoTally)
+    .map(([ip, n]) => `<span class="demo-chip tally"><b>${ip}</b> +${n}</span>`).join('');
+}
+
+function demoLogMove(entry, target){
+  demoMoves++;
+  demoTally[target.client.ip] = (demoTally[target.client.ip] || 0) + 1;
+  renderDemoTally();
+  const chip = document.createElement('span');
+  chip.className = 'demo-chip';
+  chip.innerHTML = `#${demoMoves} <span class="demo-dot" style="background:${COLOR_VARS[entry.color]}"></span>${entry.color} → ${target.client.ip} <small>${target.mode}</small>`;
+  demoLogEl.prepend(chip);
+  while(demoLogEl.children.length > 16) demoLogEl.lastChild.remove();
+}
+
+function demoReset(){
+  demoPanel.classList.remove('visible');
+  demoPanel.querySelectorAll('.demo-phase').forEach(el => el.classList.remove('done', 'current'));
+  demoStatusEl.textContent = '';
+  demoTally = {}; demoMoves = 0;
+  demoTallyEl.innerHTML = '';
+  demoLogEl.innerHTML = '';
+}
+
+window.addEventListener('resize', ()=>{
+  relayoutMainQueue();
+});
+
+rebuild();
+updateDemoHint();
+</script>
+</body>
+</html>
